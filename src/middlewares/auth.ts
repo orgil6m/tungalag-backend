@@ -9,7 +9,7 @@ interface TokenPayload extends JwtPayload {
   role: string[];
 }
 
-interface AuthenticatedRequest extends Request {
+export interface AuthenticatedRequest extends Request {
   userId?: string;
   userRole?: string[];
 }

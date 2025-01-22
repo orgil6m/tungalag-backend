@@ -34,3 +34,7 @@ export const publicSelect = {
   createdBy: 0,
   updatedBy: 0,
 };
+
+export const ToNumber = (val: any): number => {
+  return parseInt(val as string);
+};

@@ -53,6 +53,16 @@ const UserSchema = new Schema<User>(
   }
 );
 
+UserSchema.virtual("name").get(function () {
+  const lastname = this.lastname || "";
+  const firstname = this.firstname || "";
+  const response =
+    !lastname || !firstname
+      ? "Хэрэглэгч"
+      : lastname.slice(0, 1) + "." + firstname;
+  return response;
+});
+
 UserSchema.methods.getAccessToken = function () {
   const token = jwt.sign(
     { id: this._id.toString(), role: this.role },

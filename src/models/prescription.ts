@@ -1,4 +1,4 @@
-import { model, Schema } from "mongoose";
+import { model, Schema, Document } from "mongoose";
 
 type Vision = {
   sphere?: number;
@@ -8,23 +8,17 @@ type Vision = {
   vcc?: number;
 };
 
-type Prescription = {
+export interface Prescription extends Document {
   userId: Schema.Types.ObjectId;
   date: Date;
   pd?: number;
-  rightEye: {
-    near: Vision;
-    far: Vision;
-  };
-  leftEye: {
-    near: Vision;
-    far: Vision;
-  };
+  near: { rightEye: Vision; leftEye: Vision };
+  far: { rightEye: Vision; leftEye: Vision };
   notes?: String;
   createdBy: Schema.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
-};
+}
 
 const VisionSchema = new Schema<Vision>(
   {
@@ -40,15 +34,10 @@ const VisionSchema = new Schema<Vision>(
 const PrescriptionSchema = new Schema<Prescription>(
   {
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    date: { type: Date, required: true },
-    rightEye: {
-      near: VisionSchema,
-      far: VisionSchema,
-    },
-    leftEye: {
-      near: VisionSchema,
-      far: VisionSchema,
-    },
+    date: { type: Date, required: true, default: Date.now() },
+    pd: Number,
+    near: { rightEye: VisionSchema, leftEye: VisionSchema },
+    far: { rightEye: VisionSchema, leftEye: VisionSchema },
     notes: { type: String },
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
   },
