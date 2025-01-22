@@ -3,9 +3,11 @@ import express, { Application } from "express";
 import routes from "./routes";
 import middlewares from "./middlewares";
 import errorHandler from "./middlewares/error";
-import env from "./config/env";
+import { host, port } from "./config/env";
+import { connectDB } from "./config/db";
 
-const { host, port } = env;
+connectDB();
+
 const URL = `${host}:${port}`;
 const app: Application = express();
 
