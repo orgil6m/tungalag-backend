@@ -1,52 +1,30 @@
-// import asyncHandler from "express-async-handler";
-// import { PrescriptionModel as Prescription } from "../models/prescription";
-// import MyError from "../utils/error";
-// import { AuthenticatedRequest } from "../middlewares/auth";
+import { PrescriptionModel } from "../models/prescription";
+import { publicSelect } from "../utils/tools";
+import { CommonController } from "./common";
+import { asyncHandler, myAsyncHandler } from "../utils/asyncHandler";
+import { AuthenticatedRequest } from "../middlewares/auth";
 
-// const publicSelect = { refresh: 0, createdAt: 0, updatedAt: 0 };
+const { createdBy, ...defaultSelect } = publicSelect;
 
-// export const getPrescriptionById = asyncHandler(async (req, res) => {
-//   const { id } = req.params;
-//   const prescription = await Prescription.findById(id)
-//     .select(publicSelect)
-//     .lean();
-//   if (!prescription) throw new MyError("Prescription not found");
-//   res.status(200).json({ success: true, data: prescription });
-// });
+const controller = new CommonController(PrescriptionModel, {
+  defaultSelect,
+});
 
-// export const getPrescriptions = asyncHandler(async (req, res) => {
-//   const prescriptions = await Prescription.find().select(publicSelect);
-//   if (!prescriptions || prescriptions.length == 0)
-//     throw new MyError("Users not found");
-//   res.status(200).json({ success: true, data: prescriptions });
-// });
+export const getPrescriptionById = myAsyncHandler(controller.getOneById, {
+  populate: [{ path: "createdBy", select: "firstname lastname name" }],
+});
 
-// export const createPrescription = asyncHandler(async (req, res) => {
-//   const { body } = req;
-//   const prescriptions = await Prescription.create(body);
+export const getPrescriptions = myAsyncHandler(controller.getMany);
+export const createPrescription = myAsyncHandler(controller.create);
+export const updatePrescription = myAsyncHandler(controller.update);
+export const deletePrescription = myAsyncHandler(controller.delete);
 
-//   res.status(200).json({ success: true, data: prescriptions });
-// });
-
-// export const updatePrescription = asyncHandler(
-//   async (req: AuthenticatedRequest, res) => {
-//     const { id } = req.params;
-//     const { body, userId, userRole } = req;
-//     if (id != userId && !userRole?.includes("admin"))
-//       throw new MyError("Та зөвхөн өөрийн мэдээллийг засах эрхтэй");
-
-//     const prescription = await Prescription.findByIdAndUpdate(id, body, {
-//       new: true,
-//     }).select(publicSelect);
-
-//     if (!prescription) throw new MyError("Prescription not found");
-//     res.status(200).json({ success: true, data: prescription });
-//   }
-// );
-
-// export const deletePrescription = asyncHandler(async (req, res) => {
-//   const { id } = req.params;
-//   const prescription = await Prescription.findByIdAndDelete(id);
-//   if (!prescription) throw new MyError("Prescription not found");
-//   res.status(200).json({ success: true, message: "Successfully deleted" });
-// });
+export const getPrescriptionsHistory = asyncHandler(
+  async (req: AuthenticatedRequest, res) => {
+    const { userId } = req;
+    const data = await PrescriptionModel.find({ userId })
+      .select(publicSelect)
+      .lean();
+    res.json({ status: "success", data });
+  }
+);

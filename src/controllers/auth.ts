@@ -1,7 +1,7 @@
 import asyncHandler from "express-async-handler";
 import MyError from "../utils/error";
 import { isValidPhone } from "../utils/validators";
-import { sendMessage } from "../lib/sms";
+import { sendMessage } from "../utils/sms";
 import { OtpModel as Otp } from "../models/otp";
 import { User, UserModel } from "../models/user";
 import { createOtp, handleOtpError, verifyOtp } from "../services/otp";

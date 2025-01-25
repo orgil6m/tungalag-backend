@@ -15,9 +15,11 @@ export interface Prescription extends Document {
   near: { rightEye: Vision; leftEye: Vision };
   far: { rightEye: Vision; leftEye: Vision };
   notes?: String;
+  branchId: Schema.Types.ObjectId;
   createdBy: Schema.Types.ObjectId;
   createdAt: Date;
-  updatedAt: Date;
+  updatedBy?: Schema.Types.ObjectId;
+  updatedAt?: Date;
 }
 
 const VisionSchema = new Schema<Vision>(
@@ -25,8 +27,8 @@ const VisionSchema = new Schema<Vision>(
     sphere: { type: Number },
     cylinder: { type: Number },
     axis: { type: Number },
-    vsc: { type: String },
-    vcc: { type: String },
+    vsc: { type: Number },
+    vcc: { type: Number },
   },
   { _id: false }
 );
@@ -38,8 +40,10 @@ const PrescriptionSchema = new Schema<Prescription>(
     pd: Number,
     near: { rightEye: VisionSchema, leftEye: VisionSchema },
     far: { rightEye: VisionSchema, leftEye: VisionSchema },
+    branchId: { type: Schema.Types.ObjectId, ref: "Branch", required: true },
     notes: { type: String },
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    updatedBy: { type: Schema.Types.ObjectId, ref: "User" },
   },
   {
     timestamps: true,

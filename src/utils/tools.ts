@@ -28,7 +28,7 @@ export const fromNowInDays = (days: number) => {
   return new Date(Date.now() + days * 24 * 60 * 60 * 1000);
 };
 
-export const publicSelect = {
+export const publicSelect: { [key: string]: 0 | 1 } = {
   createdAt: 0,
   updatedAt: 0,
   createdBy: 0,

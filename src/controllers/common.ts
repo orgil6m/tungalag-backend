@@ -1,181 +1,182 @@
-import asyncHandler from "express-async-handler";
-import { Document, Model, Query } from "mongoose";
+import { Response } from "express";
+import {
+  Document,
+  FilterQuery,
+  Model,
+  RootFilterQuery,
+  Schema,
+} from "mongoose";
 import MyError from "../utils/error";
 import { AuthenticatedRequest } from "../middlewares/auth";
-import paginate from "../utils/paginate";
-import { ToNumber } from "../utils/tools";
+import { isAdmin, isCreator } from "../utils/validators";
 
-interface ControllerOptions {
-  select?: any;
-  sort?: any;
-  populate?: { path: string; select: string }[];
-}
+type ModelField<T> = keyof T;
 
-interface PaginationResult {
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-  hasNextPage: boolean;
-  hasPrevPage: boolean;
-}
+type Select<T> = Partial<Record<ModelField<T>, 0 | 1>>;
+type Populate<T> = { path: ModelField<T>; select: string };
 
-export class CommonController<T extends Document> {
-  constructor(
-    private model: Model<T>,
-    private options: ControllerOptions = {}
-  ) {}
+type ControllerOptions<T> = {
+  defaultPopulate?: Populate<T>[];
+  defaultSelect?: Select<T>;
+  defaultFind?: RootFilterQuery<T>;
+};
 
-  getById = asyncHandler(async (req, res) => {
+type CommonProps = {
+  req: AuthenticatedRequest;
+  res: Response;
+};
+
+export type QueryProps<T> = {
+  find?: RootFilterQuery<T>;
+  select?: Select<T>;
+  populate?: Populate<T>[];
+  sort?: string;
+  page?: number;
+  limit?: number;
+};
+
+type MyDocument = Document & {
+  createdBy?: Schema.Types.ObjectId;
+  updatedBy?: Schema.Types.ObjectId;
+};
+
+export class CommonController<T extends MyDocument> {
+  private model: Model<T>;
+  private options?: ControllerOptions<T>;
+
+  constructor(model: Model<T>, options?: ControllerOptions<T>) {
+    this.model = model;
+    this.options = options;
+  }
+
+  public getMany = async ({
+    req,
+    res,
+    ...props
+  }: CommonProps & QueryProps<T>) => {
+    let { find } = props;
+    find = find || this.options?.defaultFind || {};
+    const query = this.buildQuery(this.model.find(find), props, true);
+    const [data, total] = await Promise.all([
+      query.exec(),
+      this.model.countDocuments(find),
+    ]);
+    const pagination = this.buildPagination(total, props.page, props.limit);
+    res.json({ status: "success", data, pagination });
+  };
+
+  public getOne = async ({
+    req,
+    res,
+    ...props
+  }: CommonProps & QueryProps<T>) => {
+    let { find } = props;
+    find = find || this.options?.defaultFind || {};
+    const query = this.buildQuery(this.model.findOne(find), props);
+    const data = await query.exec();
+    if (!data) throw new MyError("Мэдээлэл олдсонгүй.", 404);
+    res.json({ status: "success", data });
+  };
+
+  public getOneById = async ({
+    req,
+    res,
+    ...props
+  }: CommonProps & QueryProps<T>) => {
     const { id } = req.params;
-    const { select, populate } = this.options;
+    const query = this.buildQuery(this.model.findById(id), props);
+    const data = await query.exec();
+    if (!data)
+      throw new MyError(`${id} id-тай ${this.model.name} олдсонгүй.`, 404);
+    res.json({ status: "success", data });
+  };
 
-    let query = this.model.findById(id).select(select);
+  public create = async ({ req, res }: CommonProps) => {
+    req.body.createdBy = req.userId;
+    const newData = new this.model(req.body);
+    const savedData = await newData.save();
+    res.status(201).json({
+      status: "success",
+      message: `Шинэ ${this.model.modelName} амжилттай үүсгэлээ.`,
+      data: savedData,
+    });
+  };
+
+  public update = async ({ req, res }: CommonProps) => {
+    const { id } = req.params;
+    const data = await this.model.findById(id);
+    if (!data)
+      throw new MyError(
+        `Засах үйлдэл амжилтгүй: ${id}-тай ${this.model.modelName} олдсонгүй.`,
+        404
+      );
+
+    if (!isAdmin(req) && !isCreator(data.createdBy, req)) {
+      throw new MyError(
+        `Засах үйлдэл амжилтгүй: Та зөвхөн өөрийн үүсгэсэн мэдээллийг засах боломжтой.`,
+        404
+      );
+    }
+    req.body.updatedBy = req.userId;
+    Object.assign(data, req.body);
+    const updatedData = await data.save();
+    res.json({
+      status: "success",
+      message: `${id} id-тай  ${this.model.modelName} амжилттай шинэчлэгдлээ.`,
+      data: updatedData,
+    });
+  };
+
+  public delete = async ({ req, res }: CommonProps) => {
+    const { id } = req.params;
+    const data = await this.model.findById(id);
+    if (!data)
+      throw new MyError(
+        `Устгах үйлдэл амжилтгүй: ${id}-тай ${this.model.modelName} олдсонгүй.`,
+        404
+      );
+
+    if (!isAdmin(req) && !isCreator(data.createdBy, req)) {
+      throw new MyError(
+        `Устгар үйлдэл амжилтгүй: Та зөвхөн өөрийн үүсгэсэн мэдээллийг устгах боломжтой.`,
+        404
+      );
+    }
+    await data.deleteOne();
+    res.json({
+      status: "success",
+      message: `${id} id-тай  ${this.model.modelName} амжилттай устлаа.`,
+    });
+  };
+
+  private buildQuery(query: any, props: QueryProps<T>, isMany = false) {
+    let { select, populate, sort, page, limit } = props;
+    select = select || this.options?.defaultSelect;
+    populate = populate || this.options?.defaultPopulate;
+
+    if (select) query = query.select(select || this.options?.defaultSelect);
+
     if (populate) {
       populate.forEach((field) => {
         query = query.populate(field.path, field.select);
       });
     }
-
-    const data = await query;
-    if (!data) throw new MyError(`${this.model.modelName} not found`);
-    res.status(200).json({ success: true, data });
-  });
-
-  getAll = asyncHandler(async (req, res) => {
-    const { select, sort, page, limit, search } = this.parseQuery(req.query);
-
-    const queryOptions = this.buildSearchQuery(search);
-
-    const query = this.buildQuery({
-      queryOptions,
-      select,
-      sort,
-      page,
-      limit,
-    });
-
-    const [data, total] = await Promise.all([
-      query.lean({ virtuals: true }),
-      this.model.countDocuments(queryOptions),
-    ]);
-
-    if (!data.length) {
-      throw new MyError(
-        `${this.model.modelName}s not found with the current query criteria.`
-      );
+    if (isMany) {
+      const skip = ((page || 1) - 1) * (limit || 20);
+      query = query
+        .sort(sort || "-createdAt")
+        .skip(skip)
+        .limit(limit || 20);
     }
 
-    const pagination = this.buildPagination(page, limit, total);
+    return query;
+  }
 
-    res.status(200).json({
-      success: true,
-      data,
-      pagination,
-    });
-  });
-
-  create = asyncHandler(async (req: AuthenticatedRequest, res) => {
-    const createdBy = req.userId;
-    if (!createdBy) throw new MyError("Та дахин нэвтэрнэ үү!", 403);
-    req.body.createdBy = createdBy;
-    const newData = new this.model(req.body);
-
-    const savedData = await newData.save();
-    res.status(201).json({ success: true, data: savedData });
-  });
-
-  updateById = asyncHandler(async (req, res) => {
-    const { id } = req.params;
-    const { select } = this.options;
-
-    const updatedData = await this.model
-      .findByIdAndUpdate(id, req.body, { new: true })
-      .select(select);
-
-    if (!updatedData) throw new MyError(`${this.model.modelName} not found`);
-    res.status(200).json({ success: true, data: updatedData });
-  });
-
-  deleteById = asyncHandler(async (req, res) => {
-    const { id } = req.params;
-    const deletedData = await this.model.findByIdAndDelete(id);
-    if (!deletedData) throw new MyError(`${this.model.modelName} not found`);
-    res
-      .status(200)
-      .json({ success: true, message: `${this.model.modelName} deleted` });
-  });
-
-  private parseQuery = (
-    query: any
-  ): {
-    select?: string;
-    sort?: string;
-    page: number;
-    limit: number;
-    search?: string;
-  } => {
-    return {
-      select: query.select as string,
-      sort: query.sort as string,
-      page: parseInt(query.page as string, 10) || 1,
-      limit: parseInt(query.limit as string, 10) || 10,
-      search: query.search as string,
-    };
-  };
-
-  private buildSearchQuery = (search?: string): any => {
-    if (!search) return {};
-
-    const searchFields = Object.keys(this.model.schema.paths).filter(
-      (field) => !["createdAt", "updatedAt", "__v"].includes(field)
-    );
-
-    return {
-      $or: searchFields.map((field) => ({
-        [field]: { $regex: search, $options: "i" },
-      })),
-    };
-  };
-
-  private buildQuery = ({
-    queryOptions,
-    select,
-    sort,
-    page,
-    limit,
-  }: {
-    queryOptions: any;
-    select?: string;
-    sort?: string;
-    page: number;
-    limit: number;
-  }) => {
-    let query = this.model.find(queryOptions);
-
-    if (select) {
-      query = query.select(select) as any;
-    } else if (this.options.select) {
-      query = query.select(this.options.select) as any;
-    }
-
-    if (this.options.populate) {
-      this.options.populate.forEach((field) => {
-        query = query.populate(field);
-      });
-    }
-
-    query = query.sort(sort || this.options.sort || "-createdAt");
-
-    const skip = (page - 1) * limit;
-    return query.skip(skip).limit(limit);
-  };
-
-  private buildPagination = (
-    page: number,
-    limit: number,
-    total: number
-  ): PaginationResult => {
+  private buildPagination(
+    total: number,
+    page = 1,
+    limit = 20
+  ): PaginationResult {
     const totalPages = Math.ceil(total / limit);
     return {
       total,
@@ -185,5 +186,14 @@ export class CommonController<T extends Document> {
       hasNextPage: page < totalPages,
       hasPrevPage: page > 1,
     };
-  };
+  }
 }
+
+type PaginationResult = {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+};
