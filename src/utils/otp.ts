@@ -1,6 +1,6 @@
 import { Otp, OtpModel } from "../models/otp";
-import MyError from "../utils/error";
-import { getRandomCode } from "../utils/tools";
+import MyError from "./error";
+import { getRandomCode } from "./tools";
 
 const MESSAGES = {
   INVALID_OTP: "Invalid OTP code.",

@@ -1,6 +1,7 @@
-import { Document, Schema, model } from "mongoose";
+import { model } from "mongoose";
+import { CommonDocument, CommonSchema } from "./common";
 
-export interface Branch extends Document {
+export type Branch = CommonDocument & {
   name: string;
   address: string;
   url?: string;
@@ -8,30 +9,20 @@ export interface Branch extends Document {
     lat: number;
     lng: number;
   };
-  createdBy: Schema.Types.ObjectId;
-  createdAt: Date;
-  updatedBy?: Schema.Types.ObjectId;
-  updatedAt?: Date;
-}
+};
 
-const BranchSchema = new Schema<Branch>(
-  {
-    name: { type: String, required: [true, "Branch name is required"] },
-    address: { type: String, required: [true, "Branch address is required"] },
-    url: { type: String, required: false },
-    location: {
-      lat: { type: Number, required: false },
-      lng: { type: Number, required: false },
-    },
-    createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    updatedBy: { type: Schema.Types.ObjectId, ref: "User", required: false },
+const BranchSchema = CommonSchema<Branch>({
+  name: {
+    type: String,
+    required: [true, "Салбарын нэр дамжуулна уу."],
+    index: true,
   },
-  {
-    timestamps: true,
-    versionKey: false,
-    toJSON: { virtuals: true },
-    toObject: { virtuals: true },
-  }
-);
+  address: { type: String, required: [true, "Салбарын хаяг дамжуулна уу."] },
+  url: { type: String, required: false },
+  location: {
+    lat: { type: Number, required: false },
+    lng: { type: Number, required: false },
+  },
+});
 
 export const BranchModel = model<Branch>("Branch", BranchSchema);

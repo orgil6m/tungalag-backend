@@ -1,9 +1,9 @@
-import { Schema, model, Document } from "mongoose";
+import { Schema, model } from "mongoose";
 import { v4 as uuid } from "uuid";
-
 import jwt from "jsonwebtoken";
 import { accessTokenExpiresIn, accessTokenSecret } from "../config/env";
 import { fromNowInDays } from "../utils/tools";
+import { CommonDocument, CommonSchema } from "./common";
 
 export type Address = {
   province?: string;
@@ -15,53 +15,64 @@ export type Address = {
   postalCode?: string;
 };
 
-export interface User extends Document {
+export type User = CommonDocument & {
   firstname: string;
   lastname: string;
   phone: string;
   address?: Address;
   birthdate?: Date;
   gender: "Male" | "Female";
-  createdAt: Date;
-  updatedAt: Date;
   refresh: { token: string; expireAt: Date };
   role: [string];
-  getAccessToken(): { accessToken: string; accessExpTime: Date };
-  getRefreshToken(): Promise<{ refreshToken: string; refreshExpTime: Date }>;
-}
+  getAccessToken(): { token: string; expireAt: Date };
+  getRefreshToken(): Promise<{ token: string; expireAt: Date }>;
+};
 
-const UserSchema = new Schema<User>(
+const AddressSchema = new Schema<Address>(
   {
-    firstname: String,
-    lastname: String,
-    phone: { type: String, required: true, index: true },
-    birthdate: Date,
-    gender: { type: String, enum: ["Male", "Female"] },
-    refresh: { token: String, expireAt: Date },
-    role: {
-      type: [String],
-      required: true,
-      enum: ["admin", "employee", "customer"],
-      default: ["customer"],
-    },
+    province: String,
+    district: String,
+    subdistrict: String,
+    street: String,
+    buildingnumber: String,
+    apartmentnumber: String,
+    postalCode: Number,
   },
-  {
-    timestamps: true,
-    versionKey: false,
-    toJSON: { virtuals: true },
-    toObject: { virtuals: true },
-  }
+  { _id: false }
 );
 
+const UserSchema = CommonSchema<User>({
+  firstname: String,
+  lastname: String,
+  phone: {
+    type: String,
+    required: [true, "Утасны дугаар дамжуулна уу."],
+    index: true,
+  },
+  address: AddressSchema,
+  birthdate: Date,
+  gender: { type: String, enum: ["Male", "Female"] },
+  refresh: { token: String, expireAt: Date },
+  role: {
+    type: [String],
+    enum: ["admin", "employee", "customer"],
+    default: ["customer"],
+  },
+});
+
 UserSchema.virtual("name").get(function () {
-  const lastname = this.lastname || "";
-  const firstname = this.firstname || "";
+  return buildUserName(this);
+});
+
+export const buildUserName = (user: User) => {
+  const lastname = user.lastname || "";
+  const firstname = user.firstname || "";
   const response =
     !lastname || !firstname
       ? "Хэрэглэгч"
       : lastname.slice(0, 1) + "." + firstname;
   return response;
-});
+};
 
 UserSchema.methods.getAccessToken = function () {
   const token = jwt.sign(
@@ -74,7 +85,7 @@ UserSchema.methods.getAccessToken = function () {
   const expirationTimeInMinutes = parseInt(accessTokenExpiresIn, 10);
   const tokenExpTime = new Date();
   tokenExpTime.setMinutes(tokenExpTime.getMinutes() + expirationTimeInMinutes);
-  return { accessToken: token, accessExpTime: tokenExpTime };
+  return { token: token, expireAt: tokenExpTime };
 };
 
 UserSchema.methods.getRefreshToken = async function () {
@@ -82,7 +93,7 @@ UserSchema.methods.getRefreshToken = async function () {
   const tokenExpTime = fromNowInDays(7);
   this.refresh = { token, expireAt: tokenExpTime };
   await this.save();
-  return { refreshToken: token, refreshExpTime: tokenExpTime };
+  return { token: token, expireAt: tokenExpTime };
 };
 
 export const UserModel = model<User>("User", UserSchema);

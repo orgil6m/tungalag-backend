@@ -3,9 +3,11 @@ import MyError from "../utils/error";
 import { isValidPhone } from "../utils/validators";
 import { sendMessage } from "../utils/sms";
 import { OtpModel as Otp } from "../models/otp";
-import { User, UserModel } from "../models/user";
-import { createOtp, handleOtpError, verifyOtp } from "../services/otp";
+import { buildUserName, User, UserModel } from "../models/user";
+import { createOtp, handleOtpError, verifyOtp } from "../utils/otp";
 import { Response } from "express";
+import { AuthenticatedRequest } from "../middlewares/auth";
+import { PrescriptionModel } from "../models/prescription";
 
 const MESSAGES = {
   PHONE_REQUIRED: "Phone is required!",
@@ -25,20 +27,21 @@ export const buildUserInstance = async (
 ) => {
   const access = user.getAccessToken();
   let refresh = {
-    refreshToken: user.refresh.token,
-    refreshExpTime: user.refresh.expireAt,
+    token: user.refresh.token,
+    expireAt: user.refresh.expireAt,
   };
 
   if (isRefresh) refresh = await user.getRefreshToken();
 
-  if (res) {
-    res.cookie("refreshToken", refresh.refreshToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "strict",
-      maxAge: refresh.refreshExpTime.getTime() - Date.now(),
-    });
-  }
+  const latestPrescription = await PrescriptionModel.findOne(
+    {
+      userId: user._id,
+    },
+    {},
+    { sort: { createdAt: -1 } }
+  )
+    .populate("createdBy", "firstname lastname")
+    .populate("branchId", "name address url");
 
   return {
     access,
@@ -48,9 +51,13 @@ export const buildUserInstance = async (
       phone: user.phone,
       firstname: user.firstname,
       lastname: user.lastname,
+      name: buildUserName(user),
       role: user.role,
+      gender: user.gender,
+      birthdate: user.birthdate,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
+      latestPrescription,
     },
   };
 };
@@ -91,11 +98,20 @@ export const checkOtp = asyncHandler(async (req, res) => {
   });
 });
 
-export const refreshAccessToken = asyncHandler(async (req, res) => {
-  const token = req.cookies.refreshToken;
-  if (!token) throw new MyError("Refresh token is required", 401);
-  const user = await UserModel.findOne({ "refresh.token": token });
-  if (!user) throw new MyError("Invalid refresh token", 403);
-  const data = await buildUserInstance(user, res, false);
-  res.status(200).json({ success: true, data: data });
-});
+export const refreshAccessToken = asyncHandler(
+  async (req: AuthenticatedRequest, res) => {
+    const token = req.body.refreshToken;
+    const userId = req.userId;
+    if (!token) throw new MyError("Refresh token is required", 401);
+
+    const user = await UserModel.findOne({
+      "refresh.token": token,
+      "refresh.expireAt": { $gt: new Date() },
+      _id: userId,
+    });
+
+    if (!user) throw new MyError("Invalid refresh token", 403);
+    const data = await buildUserInstance(user, res, false);
+    res.status(200).json({ success: true, data: data });
+  }
+);

@@ -35,12 +35,12 @@ export type QueryProps<T> = {
   limit?: number;
 };
 
-type MyDocument = Document & {
+type CommonDocument = Document & {
   createdBy?: Schema.Types.ObjectId;
   updatedBy?: Schema.Types.ObjectId;
 };
 
-export class CommonController<T extends MyDocument> {
+export class CommonController<T extends CommonDocument> {
   private model: Model<T>;
   private options?: ControllerOptions<T>;
 

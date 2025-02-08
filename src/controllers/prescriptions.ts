@@ -22,8 +22,9 @@ export const deletePrescription = myAsyncHandler(controller.delete);
 export const getPrescriptionsHistory = asyncHandler(
   async (req: AuthenticatedRequest, res) => {
     const { userId } = req;
-    const data = await PrescriptionModel.find({ userId })
-      .select(publicSelect)
+    const data = await PrescriptionModel.find({ userId, isActive: 1 })
+      .select({ createdBy: 1, createdAt: 1 })
+      .populate("createdBy", "firstname lastname")
       .lean();
     res.json({ status: "success", data });
   }

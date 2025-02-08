@@ -1,4 +1,5 @@
-import { model, Schema, Document } from "mongoose";
+import { model, Schema } from "mongoose";
+import { CommonDocument, CommonSchema } from "./common";
 
 type Vision = {
   sphere?: number;
@@ -8,19 +9,16 @@ type Vision = {
   vcc?: number;
 };
 
-export interface Prescription extends Document {
+export type Prescription = CommonDocument & {
   userId: Schema.Types.ObjectId;
   date: Date;
-  pd?: number;
+  pd?: Number;
   near: { rightEye: Vision; leftEye: Vision };
   far: { rightEye: Vision; leftEye: Vision };
-  notes?: String;
+  notes?: string;
+  isActive: boolean;
   branchId: Schema.Types.ObjectId;
-  createdBy: Schema.Types.ObjectId;
-  createdAt: Date;
-  updatedBy?: Schema.Types.ObjectId;
-  updatedAt?: Date;
-}
+};
 
 const VisionSchema = new Schema<Vision>(
   {
@@ -33,25 +31,24 @@ const VisionSchema = new Schema<Vision>(
   { _id: false }
 );
 
-const PrescriptionSchema = new Schema<Prescription>(
-  {
-    userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    date: { type: Date, required: true, default: Date.now() },
-    pd: Number,
-    near: { rightEye: VisionSchema, leftEye: VisionSchema },
-    far: { rightEye: VisionSchema, leftEye: VisionSchema },
-    branchId: { type: Schema.Types.ObjectId, ref: "Branch", required: true },
-    notes: { type: String },
-    createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    updatedBy: { type: Schema.Types.ObjectId, ref: "User" },
+const PrescriptionSchema = CommonSchema<Prescription>({
+  userId: {
+    type: Schema.Types.ObjectId,
+    ref: "User",
+    required: [true, "Хэрэглэгчийн ID дамжуулна уу."],
   },
-  {
-    timestamps: true,
-    versionKey: false,
-    toJSON: { virtuals: true },
-    toObject: { virtuals: true },
-  }
-);
+  date: { type: Date, required: true, default: Date.now() },
+  pd: { type: Number },
+  near: { rightEye: VisionSchema, leftEye: VisionSchema },
+  far: { rightEye: VisionSchema, leftEye: VisionSchema },
+  branchId: {
+    type: Schema.Types.ObjectId,
+    ref: "Branch",
+    required: [true, "Салбарын ID дамжуулна уу."],
+  },
+  isActive: { type: Boolean, default: true },
+  notes: { type: String },
+});
 
 export const PrescriptionModel = model<Prescription>(
   "Prescription",
