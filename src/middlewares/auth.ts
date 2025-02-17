@@ -19,13 +19,13 @@ export const isAuth = asyncHandler(
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      throw new MyError("Токен байхгүй байна!", 401);
+      throw new MyError("Та дахин нэвтэрнэ үү!", 401);
     }
 
     const token = authHeader.split(" ")[1];
 
     if (!token) {
-      throw new MyError("Токен байхгүй байна!", 401);
+      throw new MyError("Та дахин нэвтэрнэ үү!", 401);
     }
 
     try {
@@ -33,10 +33,9 @@ export const isAuth = asyncHandler(
 
       req.userId = decoded.id;
       req.userRole = decoded.role;
-
       next();
     } catch (error) {
-      throw new MyError("Токен буруу эсвэл хугацаа дууссан!", 401);
+      throw new MyError("Та дахин нэвтэрнэ үү!", 401);
     }
   }
 );

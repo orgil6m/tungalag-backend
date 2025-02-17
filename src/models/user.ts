@@ -96,4 +96,12 @@ UserSchema.methods.getRefreshToken = async function () {
   return { token: token, expireAt: tokenExpTime };
 };
 
+UserSchema.virtual("prescriptions", {
+  ref: "Prescription",
+  localField: "_id",
+  foreignField: "userId",
+  justOne: false,
+  match: { isActive: true },
+});
+
 export const UserModel = model<User>("User", UserSchema);

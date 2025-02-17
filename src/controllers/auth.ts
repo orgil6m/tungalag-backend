@@ -11,6 +11,7 @@ import { PrescriptionModel } from "../models/prescription";
 
 const MESSAGES = {
   PHONE_REQUIRED: "Phone is required!",
+  FIELDS_MISSING: "Талбаруудыг бүрэн дамжуулна уу!",
   INVALID_PHONE: "Please provide a valid phone number.",
   OTP_NOT_FOUND: "OTP not found.",
   INVALID_OTP: "Invalid OTP code.",
@@ -20,11 +21,7 @@ const MESSAGES = {
   OTP_EXPIRED: "OTP has expired.",
 };
 
-export const buildUserInstance = async (
-  user: User,
-  res: Response,
-  isRefresh = true
-) => {
+export const buildUserInstance = async (user: User, isRefresh = true) => {
   const access = user.getAccessToken();
   let refresh = {
     token: user.refresh.token,
@@ -33,7 +30,7 @@ export const buildUserInstance = async (
 
   if (isRefresh) refresh = await user.getRefreshToken();
 
-  const latestPrescription = await PrescriptionModel.findOne(
+  const prescriptions = await PrescriptionModel.find(
     {
       userId: user._id,
     },
@@ -57,7 +54,7 @@ export const buildUserInstance = async (
       birthdate: user.birthdate,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
-      latestPrescription,
+      prescriptions,
     },
   };
 };
@@ -79,7 +76,7 @@ export const reqOtp = asyncHandler(async (req, res) => {
 export const checkOtp = asyncHandler(async (req, res) => {
   const { phone, code } = req.body;
 
-  if (!phone || !code) throw new MyError(MESSAGES.PHONE_REQUIRED, 400);
+  if (!phone || !code) throw new MyError(MESSAGES.FIELDS_MISSING, 400);
 
   const otp = await Otp.findOne({ phone }).sort({ createdAt: -1 });
   if (!otp) throw new MyError(MESSAGES.OTP_NOT_FOUND, 400);
@@ -93,7 +90,7 @@ export const checkOtp = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     success: true,
-    data: await buildUserInstance(user, res),
+    data: await buildUserInstance(user),
     message: MESSAGES.OTP_VERIFIED,
   });
 });
@@ -111,7 +108,7 @@ export const refreshAccessToken = asyncHandler(
     });
 
     if (!user) throw new MyError("Invalid refresh token", 403);
-    const data = await buildUserInstance(user, res, false);
+    const data = await buildUserInstance(user, false);
     res.status(200).json({ success: true, data: data });
   }
 );

@@ -9,5 +9,8 @@ export const isValidPhone = (phone: string) => {
 export const isAdmin = (req: AuthenticatedRequest) =>
   req.userRole?.includes("admin");
 
+export const isOnlyCustomer = (req: AuthenticatedRequest) =>
+  req.userRole?.includes("customer") && !req.userRole?.includes("employee");
+
 export const isCreator = (createdBy: any, req: AuthenticatedRequest) =>
   createdBy?.toString() === req.userId?.toString();

@@ -13,7 +13,10 @@ import { isAdmin, isCreator } from "../utils/validators";
 type ModelField<T> = keyof T;
 
 type Select<T> = Partial<Record<ModelField<T>, 0 | 1>>;
-type Populate<T> = { path: ModelField<T>; select: string };
+type Populate<T> = {
+  path: ModelField<T>;
+  select: string;
+};
 
 type ControllerOptions<T> = {
   defaultPopulate?: Populate<T>[];
@@ -43,10 +46,12 @@ type CommonDocument = Document & {
 export class CommonController<T extends CommonDocument> {
   private model: Model<T>;
   private options?: ControllerOptions<T>;
+  private name?: String;
 
-  constructor(model: Model<T>, options?: ControllerOptions<T>) {
+  constructor(model: Model<T>, options?: ControllerOptions<T>, name?: String) {
     this.model = model;
     this.options = options;
+    this.name = name;
   }
 
   public getMany = async ({
@@ -62,6 +67,7 @@ export class CommonController<T extends CommonDocument> {
       this.model.countDocuments(find),
     ]);
     const pagination = this.buildPagination(total, props.page, props.limit);
+
     res.json({ status: "success", data, pagination });
   };
 
@@ -86,8 +92,11 @@ export class CommonController<T extends CommonDocument> {
     const { id } = req.params;
     const query = this.buildQuery(this.model.findById(id), props);
     const data = await query.exec();
-    if (!data)
-      throw new MyError(`${id} id-тай ${this.model.name} олдсонгүй.`, 404);
+
+    if (!data) {
+      const modelName = this.name ?? this.model.modelName;
+      throw new MyError(`${modelName} олдсонгүй.`, 404);
+    }
     res.json({ status: "success", data });
   };
 
@@ -95,7 +104,7 @@ export class CommonController<T extends CommonDocument> {
     req.body.createdBy = req.userId;
     const newData = new this.model(req.body);
     const savedData = await newData.save();
-    res.status(201).json({
+    res.status(200).json({
       status: "success",
       message: `Шинэ ${this.model.modelName} амжилттай үүсгэлээ.`,
       data: savedData,
@@ -111,12 +120,13 @@ export class CommonController<T extends CommonDocument> {
         404
       );
 
-    if (!isAdmin(req) && !isCreator(data.createdBy, req)) {
+    if (!isAdmin(req) || !isCreator(data.createdBy, req)) {
       throw new MyError(
         `Засах үйлдэл амжилтгүй: Та зөвхөн өөрийн үүсгэсэн мэдээллийг засах боломжтой.`,
         404
       );
     }
+
     req.body.updatedBy = req.userId;
     Object.assign(data, req.body);
     const updatedData = await data.save();
@@ -138,7 +148,7 @@ export class CommonController<T extends CommonDocument> {
 
     if (!isAdmin(req) && !isCreator(data.createdBy, req)) {
       throw new MyError(
-        `Устгар үйлдэл амжилтгүй: Та зөвхөн өөрийн үүсгэсэн мэдээллийг устгах боломжтой.`,
+        `Устгах үйлдэл амжилтгүй: Та зөвхөн өөрийн үүсгэсэн мэдээллийг устгах боломжтой.`,
         404
       );
     }

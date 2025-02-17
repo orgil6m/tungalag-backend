@@ -7,11 +7,13 @@ import {
   getPrescriptions,
   getPrescriptionsHistory,
   updatePrescription,
+  getLatestPrescription,
 } from "../controllers/prescriptions";
 
 const router = Router();
 
-router.route("/history").get(isAuth, getPrescriptionsHistory);
+router.route("/history/:userId").get(isAuth, getPrescriptionsHistory);
+router.route("/history/:userId/latest").get(isAuth, getLatestPrescription);
 
 router.route("/").get(isAuth, authorize("admin", "employee"), getPrescriptions);
 
