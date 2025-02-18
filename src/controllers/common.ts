@@ -1,11 +1,5 @@
 import { Response } from "express";
-import {
-  Document,
-  FilterQuery,
-  Model,
-  RootFilterQuery,
-  Schema,
-} from "mongoose";
+import { Document, Model, RootFilterQuery, Schema } from "mongoose";
 import MyError from "../utils/error";
 import { AuthenticatedRequest } from "../middlewares/auth";
 import { isAdmin, isCreator } from "../utils/validators";

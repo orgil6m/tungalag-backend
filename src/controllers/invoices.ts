@@ -46,3 +46,30 @@ export const getInvoice = asyncHandler(
 export const getInvoices = myAsyncHandler(controller.getMany);
 export const deleteInvoice = myAsyncHandler(controller.delete);
 export const updateInvoice = myAsyncHandler(controller.update);
+
+export const getInvoicesHistory = asyncHandler(
+  async (req: AuthenticatedRequest, res) => {
+    const { userId } = req.params;
+    const data = await InvoiceModel.find({ userId })
+      .populate("payments")
+      .populate("userId", "firstname lastname name")
+      .sort({ createdAt: -1 });
+    res.json({ status: "success", data });
+  }
+);
+
+export const getPendingInvoices = asyncHandler(
+  async (req: AuthenticatedRequest, res) => {
+    const { userId } = req.params;
+    const data = await InvoiceModel.find({ userId })
+      .populate("payments")
+      .populate("userId", "name");
+
+    if (data.length === 0) {
+      res.json({ status: "success", data: [] });
+      return;
+    }
+    const pendingInvoices = data.filter((invoice) => invoice.status !== "paid");
+    res.json({ status: "success", data: pendingInvoices });
+  }
+);

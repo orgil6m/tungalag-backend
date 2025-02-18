@@ -5,7 +5,6 @@ import { sendMessage } from "../utils/sms";
 import { OtpModel as Otp } from "../models/otp";
 import { buildUserName, User, UserModel } from "../models/user";
 import { createOtp, handleOtpError, verifyOtp } from "../utils/otp";
-import { Response } from "express";
 import { AuthenticatedRequest } from "../middlewares/auth";
 import { PrescriptionModel } from "../models/prescription";
 
@@ -23,6 +22,7 @@ const MESSAGES = {
 
 export const buildUserInstance = async (user: User, isRefresh = true) => {
   const access = user.getAccessToken();
+
   let refresh = {
     token: user.refresh.token,
     expireAt: user.refresh.expireAt,

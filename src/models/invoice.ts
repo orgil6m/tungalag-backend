@@ -10,6 +10,7 @@ export interface Invoice extends CommonDocument {
   paidAt?: Date;
   status?: "pending" | "partial" | "paid";
   payments?: Payment[];
+  isActive?: boolean;
 }
 
 const InvoiceSchema = CommonSchema<Invoice>({
@@ -31,6 +32,7 @@ const InvoiceSchema = CommonSchema<Invoice>({
   paidAt: {
     type: Date,
   },
+  isActive: { type: Boolean, default: true },
 });
 
 InvoiceSchema.virtual("payments", {
