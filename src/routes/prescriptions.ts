@@ -12,8 +12,8 @@ import {
 
 const router = Router();
 
-router.route("/history/:userId").get(isAuth, getPrescriptionsHistory);
 router.route("/history/:userId/latest").get(isAuth, getLatestPrescription);
+router.route("/history/:userId/:role").get(isAuth, getPrescriptionsHistory);
 
 router.route("/").get(isAuth, authorize("admin", "employee"), getPrescriptions);
 

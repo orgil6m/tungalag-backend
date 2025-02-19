@@ -37,7 +37,7 @@ export const checkPayment = asyncHandler(
     if (payment.qpay) {
       result = await checkQpayInvoice(payment.qpay.invoice_id);
     }
-    console.log(result);
+
     const data = {
       status: payment.status,
       message: "Нэхэмжлэл төлөгдсөн байна.",

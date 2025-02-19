@@ -22,8 +22,15 @@ export const deletePrescription = myAsyncHandler(controller.delete);
 
 export const getPrescriptionsHistory = asyncHandler(
   async (req: AuthenticatedRequest, res) => {
-    const { userId } = req.params;
-    const data = await PrescriptionModel.find({ userId, isActive: 1 })
+    const { userId, role } = req.params;
+    let find;
+    if (role == "customer") {
+      find = { userId, isActive: 1 };
+    } else {
+      find = { userId };
+    }
+
+    const data = await PrescriptionModel.find(find)
       .populate("createdBy", "firstname lastname")
       .populate("branchId", "name address url")
       .sort({ createdAt: -1 });
