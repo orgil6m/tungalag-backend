@@ -5,6 +5,7 @@ import { v4 as uuid } from "uuid";
 import { InvoiceModel } from "../models/invoice";
 import { CommonController } from "./common";
 import { createPayments } from "../utils/payments";
+import path from "path";
 
 const controller = new CommonController(InvoiceModel, {
   defaultSelect: { createdBy: 0, updatedAt: 0 },
@@ -62,8 +63,11 @@ export const getPendingInvoices = asyncHandler(
   async (req: AuthenticatedRequest, res) => {
     const { userId } = req.params;
     const data = await InvoiceModel.find({ userId })
-      .populate("payments")
-      .populate("userId", "name");
+      .populate({
+        path: "payments",
+        select: "-code",
+      })
+      .populate("userId", "firstname lastname name");
 
     if (data.length === 0) {
       res.json({ status: "success", data: [] });

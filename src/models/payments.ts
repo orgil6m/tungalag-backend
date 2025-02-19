@@ -1,7 +1,14 @@
 import { Schema, model } from "mongoose";
 import { CommonDocument, CommonSchema } from "./common";
 
-const allowedPaymentMethods = ["qpay", "cash", "card", "storepay", "pocket"];
+const allowedPaymentMethods = [
+  "qpay",
+  "cash",
+  "card",
+  "storepay",
+  "pocket",
+  "account",
+];
 
 export interface QpayBankUrl {
   name: string;
@@ -24,6 +31,7 @@ export interface Payment extends CommonDocument {
   status: "pending" | "paid";
   code: string;
   qpay?: Qpay;
+  paidAt?: Date;
 }
 
 const QpaySchema = new Schema<Qpay>(

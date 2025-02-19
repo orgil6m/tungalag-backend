@@ -59,7 +59,7 @@ export const buildPaymentObj = async (payment: Payment, method: string) => {
 
   payment.method = method;
   payment.code = code;
-
+  payment.paidAt = new Date();
   switch (payment.method) {
     case "qpay":
       const qpay = await createQpayInvoice({

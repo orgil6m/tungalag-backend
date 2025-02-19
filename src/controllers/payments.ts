@@ -1,3 +1,4 @@
+import { Mongoose, Types, ObjectId } from "mongoose";
 import { AuthenticatedRequest } from "../middlewares/auth";
 import { PaymentModel } from "../models/payments";
 import { asyncHandler } from "../utils/asyncHandler";
@@ -16,6 +17,8 @@ export const payPayment = asyncHandler(
 
     const { method } = req.body;
     if (!method) throw new MyError("Төлбөрийн хэрэгсэл сонгоно уу.", 400);
+    if (req.userId) payment.updatedBy = req.userId as unknown as ObjectId;
+
     const data = await buildPaymentObj(payment, method);
     res.json({ status: "success", data });
   }
@@ -30,15 +33,14 @@ export const checkPayment = asyncHandler(
     if (payment.status != "paid")
       throw new MyError("Төлбөр хүлээгдэж байна.", 403);
 
+    let result;
     if (payment.qpay) {
-      const res = await checkQpayInvoice(payment.qpay.invoice_id);
-      console.log(res);
+      result = await checkQpayInvoice(payment.qpay.invoice_id);
     }
-
+    console.log(result);
     const data = {
       status: payment.status,
       message: "Нэхэмжлэл төлөгдсөн байна.",
-      //   method: payment.method,
       amount: payment.amount,
       description: payment.description,
     };
