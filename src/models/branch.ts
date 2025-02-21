@@ -5,10 +5,8 @@ export type Branch = CommonDocument & {
   name: string;
   address: string;
   url?: string;
-  location?: {
-    lat: number;
-    lng: number;
-  };
+  contact?: string;
+  isActive: boolean;
 };
 
 const BranchSchema = CommonSchema<Branch>({
@@ -18,11 +16,9 @@ const BranchSchema = CommonSchema<Branch>({
     index: true,
   },
   address: { type: String, required: [true, "Салбарын хаяг дамжуулна уу."] },
+  contact: { type: String },
   url: { type: String, required: false },
-  location: {
-    lat: { type: Number, required: false },
-    lng: { type: Number, required: false },
-  },
+  isActive: { type: Boolean, default: true },
 });
 
 export const BranchModel = model<Branch>("Branch", BranchSchema);

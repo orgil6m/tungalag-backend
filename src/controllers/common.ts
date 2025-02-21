@@ -114,7 +114,7 @@ export class CommonController<T extends CommonDocument> {
         404
       );
 
-    if (!isAdmin(req) || !isCreator(data.createdBy, req)) {
+    if (!isAdmin(req) && !isCreator(data.createdBy, req)) {
       throw new MyError(
         `Засах үйлдэл амжилтгүй: Та зөвхөн өөрийн үүсгэсэн мэдээллийг засах боломжтой.`,
         404

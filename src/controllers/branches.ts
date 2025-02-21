@@ -8,7 +8,9 @@ const controller = new CommonController(BranchModel, {
 });
 
 export const getBranchById = myAsyncHandler(controller.getOneById);
-export const getBranches = myAsyncHandler(controller.getMany);
+export const getBranches = myAsyncHandler(controller.getMany, {
+  // find: { isActive: true },
+});
 export const createBranch = myAsyncHandler(controller.create);
 export const updateBranch = myAsyncHandler(controller.update);
 export const deleteBranch = myAsyncHandler(controller.delete);
