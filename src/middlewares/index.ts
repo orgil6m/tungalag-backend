@@ -6,7 +6,7 @@ import hpp from "hpp";
 import loggerMiddleware from "./logger";
 import cors from "./cors";
 
-const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 1000 });
+const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 500 });
 
 const securityMiddlewares = [helmet(), hpp()];
 const utilMiddlewares = [
